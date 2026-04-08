@@ -391,6 +391,22 @@
           </div>
           <p class="text-xs text-gray-600 mt-1.5" id="audio-mode-hint">Cada jugador escucha en su dispositivo</p>
         </div>
+
+        <!-- Rebote -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-2">Rebote</label>
+          <div class="flex rounded-xl overflow-hidden border border-white/10">
+            <button id="rebote-on" onclick="setRebote(true)"
+              class="flex-1 py-2.5 text-xs font-semibold tab-active flex items-center justify-center gap-1.5">
+              🔄 Con rebote
+            </button>
+            <button id="rebote-off" onclick="setRebote(false)"
+              class="flex-1 py-2.5 text-xs font-semibold tab-inactive transition-colors flex items-center justify-center gap-1.5">
+              ✕ Sin rebote
+            </button>
+          </div>
+          <p class="text-xs text-gray-600 mt-1.5" id="rebote-hint">Si fallas, el resto puede intentarlo (500 pts)</p>
+        </div>
       </div>
 
       <div id="host-actions" class="hidden">
@@ -494,6 +510,12 @@
           <button onclick="hostPass()" class="btn-ghost w-full py-3.5 rounded-xl text-base">
             ⏭ Pasar sin puntos
           </button>
+        </div>
+
+        <!-- Rebote notice (shown after a failed buzz when rebote is active) -->
+        <div id="rebote-notice" class="hidden glass rounded-2xl p-4 text-center" style="border-color:rgba(234,179,8,.4)">
+          <p class="text-yellow-400 font-bold text-lg">🔄 ¡Rebote!</p>
+          <p class="text-gray-400 text-xs mt-1">El siguiente jugador puede responder · 500 pts</p>
         </div>
 
         <!-- Who buzzed -->
@@ -899,7 +921,7 @@
     let me = null, room = null, host = false, gs = null, socket = null;
     let myAnswer = null, pollId = null, timerId = null;
     let lastPhase = null, lastRound = -1, roundEndQueued = false;
-    let activeTab = 'create', cfgAudioMode = 'all';
+    let activeTab = 'create', cfgAudioMode = 'all', cfgRebote = true;
 
     // ─────────────────────────────────────────
     // UI HELPERS
@@ -920,6 +942,13 @@
       document.getElementById('am-all').className = `flex-1 py-2.5 text-xs font-semibold ${mode === 'all' ? 'tab-active' : 'tab-inactive transition-colors'} flex items-center justify-center gap-1.5`;
       document.getElementById('am-host').className = `flex-1 py-2.5 text-xs font-semibold ${mode === 'host_only' ? 'tab-active' : 'tab-inactive transition-colors'} flex items-center justify-center gap-1.5`;
       document.getElementById('audio-mode-hint').textContent = mode === 'all' ? 'Cada jugador escucha en su dispositivo' : 'Solo el dispositivo del anfitrión reproduce música';
+    }
+
+    function setRebote(v) {
+      cfgRebote = v;
+      document.getElementById('rebote-on').className = `flex-1 py-2.5 text-xs font-semibold ${v ? 'tab-active' : 'tab-inactive transition-colors'} flex items-center justify-center gap-1.5`;
+      document.getElementById('rebote-off').className = `flex-1 py-2.5 text-xs font-semibold ${!v ? 'tab-active' : 'tab-inactive transition-colors'} flex items-center justify-center gap-1.5`;
+      document.getElementById('rebote-hint').textContent = v ? 'Si fallas, el resto puede intentarlo (500 pts)' : 'Si fallas, la ronda termina sin puntos';
     }
 
     function showErr(msg) { const el = document.getElementById('welcome-err'); el.textContent = msg; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3500); }
@@ -1116,7 +1145,8 @@
         phase: 'playing', themeId, audioMode: cfgAudioMode,
         round: 1, totalRounds,
         songIndices: indices, currentSongIndex: 0,
-        roundEndTime: null, buzzer: null, answers: {}, roundScores: {}, totalScores
+        roundEndTime: null, buzzer: null, reboteUsed: false, failedBuzzers: [],
+        answers: {}, roundScores: {}, totalScores, allowRebote: cfgRebote
       });
     }
 
@@ -1177,6 +1207,7 @@
       document.getElementById('buzzer-status').classList.add('hidden');
       document.getElementById('host-decision').classList.add('hidden');
       document.getElementById('guest-wait-decision').classList.add('hidden');
+      document.getElementById('rebote-notice').classList.add('hidden');
 
       // Host sees song info; players don't
       const hostInfoEl = document.getElementById('host-song-info');
@@ -1216,10 +1247,14 @@
       </div>`;
         }).join('');
 
+      const inRebote = state.reboteUsed && !buz;
+
       if (buz) {
+        // Someone has buzzed — show who, host gets decision buttons
         document.getElementById('btn-buzzer').disabled = true;
         document.getElementById('buzzer-btn-wrap').classList.add('hidden');
         document.getElementById('host-pass-btn').classList.add('hidden');
+        document.getElementById('rebote-notice').classList.add('hidden');
         document.getElementById('buzzer-status').classList.remove('hidden');
         document.getElementById('buzzer-name').textContent = buz.name;
         if (host) {
@@ -1229,12 +1264,28 @@
           document.getElementById('host-decision').classList.add('hidden');
           document.getElementById('guest-wait-decision').classList.remove('hidden');
         }
+      } else if (inRebote) {
+        // Rebote active: buzzer cleared, others can buzz (except who failed)
+        const failed = state.failedBuzzers || [];
+        document.getElementById('buzzer-status').classList.add('hidden');
+        document.getElementById('host-decision').classList.add('hidden');
+        document.getElementById('guest-wait-decision').classList.add('hidden');
+        document.getElementById('rebote-notice').classList.remove('hidden');
+        if (host) {
+          document.getElementById('host-pass-btn').classList.remove('hidden');
+          document.getElementById('buzzer-btn-wrap').classList.add('hidden');
+        } else {
+          document.getElementById('host-pass-btn').classList.add('hidden');
+          const iFailed = failed.includes(me.id);
+          document.getElementById('buzzer-btn-wrap').classList.toggle('hidden', iFailed);
+          if (!iFailed) document.getElementById('btn-buzzer').disabled = false;
+        }
       }
     }
 
 
     async function pressBuzzer() {
-      if (host || myAnswer || gs?.buzzer) return;
+      if (host || myAnswer || gs?.buzzer || gs?.failedBuzzers?.includes(me.id)) return;
       myAnswer = true; // prevent double press
       document.getElementById('btn-buzzer').disabled = true;
       const buz = { userId: me.id, name: me.name, at: Date.now() };
@@ -1247,14 +1298,23 @@
       const buz = state.buzzer;
       const roundScores = {}, totalScores = { ...(state.totalScores || {}) };
       Object.keys(state.players || {}).forEach(id => { roundScores[id] = 0; });
+
       if (correct && buz) {
-        const pts = 1000;
+        const pts = state.reboteUsed ? 500 : 1000;
         roundScores[buz.userId] = pts;
         totalScores[buz.userId] = (totalScores[buz.userId] || 0) + pts;
         API.saveScore(buz.userId, room.id, pts, { round: state.round });
+        audio.pause();
+        await API.patchState(room.code, { phase: 'round_end', roundScores, totalScores });
+      } else if (!correct && state.allowRebote && !state.reboteUsed) {
+        // Rebote: clear buzzer so others can buzz (500 pts if they get it right)
+        const failedBuzzers = [...(state.failedBuzzers || []), buz.userId];
+        await API.patchState(room.code, { buzzer: null, reboteUsed: true, failedBuzzers });
+      } else {
+        // No rebote or rebote already used — round ends with 0 pts
+        audio.pause();
+        await API.patchState(room.code, { phase: 'round_end', roundScores, totalScores });
       }
-      audio.pause();
-      await API.patchState(room.code, { phase: 'round_end', roundScores, totalScores });
     }
 
     async function hostPass() {
@@ -1297,7 +1357,7 @@
         <div class="w-7 h-7 rounded-full gradient-bg flex items-center justify-center text-xs font-bold flex-shrink-0">${p.name[0].toUpperCase()}</div>
         <span class="text-sm flex-1 font-medium">${p.name}</span>
         ${buzzed
-            ? `<span class="font-bold ${correct ? 'text-green-400' : 'text-red-400'}">${correct ? '✓ Correcto' : '✗ Incorrecto'}</span>`
+            ? `<span class="font-bold ${correct ? 'text-green-400' : 'text-red-400'}">${correct ? (state.reboteUsed ? '🔄 Correcto' : '✓ Correcto') : '✗ Incorrecto'}</span>`
             : `<span class="text-gray-600">—</span>`}
         <span class="text-purple-400 font-bold text-sm">+${pts}</span>
       </div>`;
@@ -1328,7 +1388,7 @@
           round: gs.round + 1,
           currentSongIndex: gs.currentSongIndex + 1,
           roundEndTime: null,
-          buzzer: null, answers: {}, roundScores: {}
+          buzzer: null, reboteUsed: false, failedBuzzers: [], answers: {}, roundScores: {}
         });
       }
     }
@@ -1382,7 +1442,8 @@
       // preserva automáticamente en patchState mediante la fusión con gs).
       await API.patchState(room.code, {
         phase: 'lobby', themeId: null, round: 0,
-        buzzer: null, answers: {}, roundScores: {}, totalScores: {},
+        buzzer: null, reboteUsed: false, failedBuzzers: [],
+        answers: {}, roundScores: {}, totalScores: {},
         songIndices: [], timerEnd: null, roundEndTime: null
       });
       // tick() detectará phase='lobby' y llamará enterLobby() para todos
