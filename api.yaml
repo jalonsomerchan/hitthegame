@@ -1,0 +1,157 @@
+openapi: 3.0.0
+info:
+  title: API de Juegos - Alon.one
+  description: API para la gestión de salas de juego multijugador, usuarios y puntuaciones.
+  version: 1.0.0
+servers:
+  - url: https://alon.one/juegos/api
+    description: Servidor principal
+
+paths:
+  /users:
+    post:
+      summary: Crear un nuevo usuario
+      description: Registra un usuario y genera un UUID interno.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        200:
+          description: Usuario creado exitosamente
+        400:
+          description: Error en la creación (email duplicado, etc.)
+
+  /games:
+    post:
+      summary: Registrar un nuevo tipo de juego
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, max_players_per_room]
+              properties:
+                name: { type: string }
+                max_players_per_room: { type: integer }
+                default_config: { type: object }
+      responses:
+        200:
+          description: Juego creado
+
+  /rooms:
+    post:
+      summary: Crear una nueva sala
+      description: Crea una sala y une automáticamente al host.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game_id, host_id]
+              properties:
+                game_id: { type: integer }
+                host_id: { type: string, description: "UUID del usuario host" }
+                room_settings: { type: object }
+                game_state: { type: object }
+      responses:
+        200:
+          description: Sala creada con éxito
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room_id: { type: string }
+                  room_code: { type: string }
+                  message: { type: string }
+
+  /rooms/{code}:
+    get:
+      summary: Obtener el estado de una sala
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Datos detallados de la sala y jugadores
+        404:
+          description: Sala no encontrada
+
+  /rooms/{code}/join:
+    post:
+      summary: Unirse a una sala existente
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: { type: string, description: "UUID del jugador" }
+      responses:
+        200:
+          description: Unido con éxito
+        400:
+          description: El usuario ya está en la sala
+        404:
+          description: Sala no encontrada
+
+  /rooms/{code}/state:
+    patch:
+      summary: Actualizar el estado del juego o configuración
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                game_state: { type: object }
+                status: { type: string }
+                room_settings: { type: object }
+      responses:
+        200:
+          description: Estado actualizado
+
+  /scores:
+    post:
+      summary: Guardar puntuación de un jugador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, game_id, score_value]
+              properties:
+                user_id: { type: string }
+                game_id: { type: integer }
+                room_id: { type: string }
+                score_value: { type: number }
+                metadata: { type: object }
+      responses:
+        200:
+          description: Puntuación guardada

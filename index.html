@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HitYear — Adivina el Año</title>
+  <script src="data/themes.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      background: #080812;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #8B5CF6, #EC4899);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .btn-grad {
+      background: linear-gradient(135deg, #8B5CF6, #EC4899);
+      color: #fff;
+      font-weight: 700;
+      transition: all .2s;
+      cursor: pointer;
+    }
+
+    .btn-grad:hover:not(:disabled) {
+      opacity: .9;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(139, 92, 246, .35);
+    }
+
+    .btn-grad:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(255, 255, 255, .15);
+      color: #fff;
+      font-weight: 600;
+      transition: all .2s;
+      cursor: pointer;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, .14);
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .fade-up {
+      animation: fadeUp .35s ease-out;
+    }
+
+    @keyframes musicBounce {
+
+      0%,
+      100% {
+        transform: scaleY(1)
+      }
+
+      50% {
+        transform: scaleY(.25)
+      }
+    }
+
+    .music-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #8B5CF6, #EC4899);
+      animation: musicBounce var(--d, .8s) ease-in-out infinite;
+    }
+
+    .music-bar.paused {
+      animation-play-state: paused;
+    }
+
+    @keyframes pulseBorder {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(139, 92, 246, .5)
+      }
+
+      50% {
+        box-shadow: 0 0 0 12px rgba(139, 92, 246, 0)
+      }
+    }
+
+    .pulse-ring {
+      animation: pulseBorder 1.8s infinite;
+    }
+
+    .range-styled {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .range-styled::-webkit-slider-runnable-track {
+      background: rgba(255, 255, 255, .12);
+      height: 6px;
+      border-radius: 3px;
+    }
+
+    .range-styled::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      margin-top: -8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #8B5CF6, #EC4899);
+      cursor: pointer;
+    }
+
+    .range-styled::-moz-range-track {
+      background: rgba(255, 255, 255, .12);
+      height: 6px;
+      border-radius: 3px;
+    }
+
+    .range-styled::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #8B5CF6, #EC4899);
+      border: none;
+      cursor: pointer;
+    }
+
+    .timer-ring {
+      transform: rotate(-90deg);
+    }
+
+    .timer-circle {
+      transition: stroke-dashoffset 1s linear, stroke .5s;
+    }
+
+    .progress-track {
+      background: rgba(255, 255, 255, .1);
+      border-radius: 4px;
+      height: 6px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8B5CF6, #EC4899);
+      border-radius: 4px;
+      transition: width .25s linear;
+      width: 0%;
+    }
+
+    select.styled {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, .06) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B5CF6' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+      border: 1px solid rgba(255, 255, 255, .12);
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 40px 10px 14px;
+      width: 100%;
+      font-size: .95rem;
+      cursor: pointer;
+    }
+
+    select.styled option {
+      background: #1a1a2e;
+      color: #fff;
+    }
+
+    select.styled:focus {
+      outline: none;
+      border-color: #8B5CF6;
+    }
+
+    /* Tab toggle helper */
+    .tab-active {
+      background: linear-gradient(135deg, #8B5CF6, #EC4899);
+      color: #fff;
+    }
+
+    .tab-inactive {
+      color: #9ca3af;
+    }
+
+    .tab-inactive:hover {
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body class="text-white">
+
+  <!-- ═══════════════════ WELCOME ═══════════════════ -->
+  <div id="screen-welcome" class="screen active flex-col items-center justify-center p-5">
+    <div class="w-full max-w-sm fade-up">
+
+      <div class="text-center mb-8">
+        <div class="flex justify-center items-end gap-1 mb-3" style="height:44px">
+          <div class="music-bar" style="height:16px;--d:.55s"></div>
+          <div class="music-bar" style="height:36px;--d:.9s"></div>
+          <div class="music-bar" style="height:22px;--d:.7s"></div>
+          <div class="music-bar" style="height:40px;--d:1.05s"></div>
+          <div class="music-bar" style="height:28px;--d:.8s"></div>
+          <div class="music-bar" style="height:18px;--d:.65s"></div>
+          <div class="music-bar" style="height:32px;--d:.95s"></div>
+          <div class="music-bar" style="height:24px;--d:.75s"></div>
+        </div>
+        <h1 class="text-5xl font-black gradient-text tracking-tight">Hit! The Game</h1>
+        <p class="text-gray-500 mt-2 text-sm">¡Pulsa antes que los demás!</p>
+      </div>
+
+      <div class="glass rounded-2xl p-6 space-y-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5">Tu nombre</label>
+          <input id="inp-username" type="text" maxlength="20" placeholder="MusicMaster99"
+            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-colors text-base" />
+        </div>
+
+        <div class="flex rounded-xl overflow-hidden border border-white/10">
+          <button id="tab-create" onclick="setTab('create')"
+            class="flex-1 py-2.5 text-sm font-semibold tab-active">Crear sala</button>
+          <button id="tab-join" onclick="setTab('join')"
+            class="flex-1 py-2.5 text-sm font-semibold tab-inactive transition-colors">Unirse</button>
+        </div>
+
+        <div id="sec-create" class="text-center text-xs text-gray-500">Serás el anfitrión y elegirás la categoría</div>
+
+        <div id="sec-join" class="hidden">
+          <label class="block text-xs text-gray-400 mb-1.5">Código de sala</label>
+          <input id="inp-code" type="text" maxlength="8" placeholder="ABC123"
+            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-colors text-center text-2xl font-mono tracking-widest uppercase" />
+        </div>
+
+        <button onclick="handleEnter()" class="btn-grad w-full py-3.5 rounded-xl text-base">Entrar</button>
+        <p id="welcome-err" class="text-red-400 text-xs text-center hidden"></p>
+      </div>
+      <!-- Ayuda -->
+      <div class="mt-3">
+        <button onclick="this.nextElementSibling.classList.toggle('hidden')"
+          class="w-full text-xs text-gray-600 hover:text-gray-400 transition-colors flex items-center justify-center gap-1.5 py-1">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          ¿Cómo se juega?
+        </button>
+        <div class="hidden glass rounded-2xl p-4 mt-2 space-y-2.5 text-xs text-gray-400">
+          <div class="flex gap-2.5">
+            <span class="text-lg leading-none">🎵</span>
+            <p><strong class="text-gray-200">Escucha</strong> el fragmento de la canción y <strong
+                class="text-gray-200">pulsa el pulsador</strong> antes que los demás.</p>
+          </div>
+          <div class="flex gap-2.5">
+            <span class="text-lg leading-none">🎤</span>
+            <p>El primero que pulsa <strong class="text-gray-200">responde en voz alta</strong>. El <strong
+                class="text-gray-200">anfitrión</strong> decide si es correcto o no.</p>
+          </div>
+          <div class="flex gap-2.5">
+            <span class="text-lg leading-none">🏠</span>
+            <p>El <strong class="text-gray-200">anfitrión</strong> crea la sala, elige la categoría, el número de rondas
+              y el tiempo. Los demás se unen con el código.</p>
+          </div>
+          <div class="flex gap-2.5">
+            <span class="text-lg leading-none">⏱</span>
+            <p>La ronda termina cuando <strong class="text-gray-200">alguien pulsa</strong> (el anfitrión decide) o se
+              acaba el tiempo. El anfitrión controla el avance entre rondas.</p>
+          </div>
+          <div class="flex gap-2.5">
+            <span class="text-lg leading-none">🏆</span>
+            <p><strong class="text-gray-200">Respuesta correcta: 1000 pts</strong> más un <strong
+                class="text-gray-200">bonus de velocidad</strong> de hasta 200 pts según lo rápido que pulsaste.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ LOBBY ═══════════════════ -->
+  <div id="screen-lobby" class="screen flex-col items-center justify-center p-5">
+    <div class="w-full max-w-md fade-up">
+
+      <!-- Room code + share -->
+      <div class="text-center mb-5">
+        <p class="text-xs text-gray-500 mb-1">Código de sala</p>
+        <div class="flex items-center justify-center gap-3 mb-2">
+          <span id="lobby-code" class="text-5xl font-black font-mono gradient-text tracking-widest"></span>
+        </div>
+        <!-- Share buttons -->
+        <div class="flex gap-2 justify-center">
+          <button onclick="copyLink()" id="btn-copy-link"
+            class="btn-ghost px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            Copiar enlace
+          </button>
+          <button onclick="shareRoom()" id="btn-webshare"
+            class="btn-ghost px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 hidden">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            Compartir
+          </button>
+        </div>
+      </div>
+
+      <!-- Players -->
+      <div class="glass rounded-2xl p-5 mb-4">
+        <p class="text-xs text-gray-400 mb-3 font-semibold uppercase tracking-wider">Jugadores</p>
+        <div id="lobby-players" class="space-y-2"></div>
+      </div>
+
+      <!-- Host config -->
+      <div id="host-cfg" class="glass rounded-2xl p-5 mb-4 hidden space-y-5">
+        <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Configuración</p>
+
+        <!-- Theme -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5">Categoría</label>
+          <select id="cfg-theme" class="styled"></select>
+        </div>
+
+        <!-- Rounds -->
+        <div>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-gray-300">Rondas</span>
+            <span id="val-rounds" class="gradient-text font-bold">5</span>
+          </div>
+          <input type="range" id="cfg-rounds" min="2" max="15" value="5" class="range-styled"
+            oninput="document.getElementById('val-rounds').textContent=this.value" />
+          <div class="flex justify-between text-xs text-gray-600 mt-1"><span>2</span><span>15</span></div>
+        </div>
+
+        <!-- Time per round -->
+        <div>
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-gray-300">Segundos por ronda</span>
+            <span id="val-time" class="gradient-text font-bold">30s</span>
+          </div>
+          <input type="range" id="cfg-time" min="15" max="60" step="15" value="30" class="range-styled"
+            oninput="document.getElementById('val-time').textContent=this.value+'s'" />
+          <div class="flex justify-between text-xs text-gray-600 mt-1"><span>15s</span><span>60s</span></div>
+        </div>
+
+        <!-- Audio mode -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-2">¿Quién escucha la música?</label>
+          <div class="flex rounded-xl overflow-hidden border border-white/10">
+            <button id="am-all" onclick="setAudioMode('all')"
+              class="flex-1 py-2.5 text-xs font-semibold tab-active flex items-center justify-center gap-1.5">
+              🔊 Todos
+            </button>
+            <button id="am-host" onclick="setAudioMode('host_only')"
+              class="flex-1 py-2.5 text-xs font-semibold tab-inactive transition-colors flex items-center justify-center gap-1.5">
+              👤 Solo anfitrión
+            </button>
+          </div>
+          <p class="text-xs text-gray-600 mt-1.5" id="audio-mode-hint">Cada jugador escucha en su dispositivo</p>
+        </div>
+      </div>
+
+      <div id="host-actions" class="hidden">
+        <button onclick="startGame()" class="btn-grad w-full py-3.5 rounded-xl text-base pulse-ring">🎮 Iniciar
+          partida</button>
+      </div>
+      <div id="guest-wait" class="hidden text-center text-gray-500 text-sm">
+        <div class="flex justify-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:0s"></span>
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:.2s"></span>
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:.4s"></span>
+        </div>
+        Esperando al anfitrión…
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ PLAYING ═══════════════════ -->
+  <div id="screen-playing" class="screen flex-col" style="background:#080812">
+
+    <!-- Top bar -->
+    <div class="px-4 py-3 glass flex items-center justify-between"
+      style="border-bottom:1px solid rgba(255,255,255,.06)">
+      <span class="text-sm text-gray-400">Ronda <strong id="p-round" class="text-white"></strong>/<strong id="p-total"
+          class="text-white"></strong></span>
+      <span id="p-room" class="font-mono text-sm font-bold gradient-text"></span>
+    </div>
+
+    <!-- Main content -->
+    <div class="flex-1 flex flex-col items-center justify-center px-4 py-4 gap-5">
+
+      <!-- Timer ring (big) -->
+      <div class="relative flex items-center justify-center flex-shrink-0">
+        <svg width="160" height="160" class="timer-ring" style="overflow:visible">
+          <defs>
+            <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#8B5CF6" />
+              <stop offset="100%" stop-color="#EC4899" />
+            </linearGradient>
+          </defs>
+          <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7" />
+          <circle id="tcircle" cx="80" cy="80" r="70" fill="none" stroke="url(#tg)" stroke-width="7"
+            stroke-dasharray="439.8" stroke-dashoffset="0" stroke-linecap="round" class="timer-circle" />
+        </svg>
+        <div class="absolute text-center">
+          <div id="t-num" class="text-5xl font-black leading-none">30</div>
+          <div class="text-xs text-gray-500 mt-1">seg</div>
+        </div>
+      </div>
+
+      <!-- Music visualizer (shown always) -->
+      <div class="flex items-end gap-1" style="height:28px">
+        <div class="music-bar paused" style="height:10px;--d:.5s" id="vb1"></div>
+        <div class="music-bar paused" style="height:22px;--d:.75s" id="vb2"></div>
+        <div class="music-bar paused" style="height:8px;--d:.6s" id="vb3"></div>
+        <div class="music-bar paused" style="height:26px;--d:.95s" id="vb4"></div>
+        <div class="music-bar paused" style="height:14px;--d:.7s" id="vb5"></div>
+        <div class="music-bar paused" style="height:20px;--d:.85s" id="vb6"></div>
+        <div class="music-bar paused" style="height:6px;--d:.55s" id="vb7"></div>
+        <div class="music-bar paused" style="height:18px;--d:.8s" id="vb8"></div>
+      </div>
+
+      <!-- Audio player (shown when canHearAudio) -->
+      <div id="player-block" class="w-full max-w-xs">
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center gap-3">
+            <button id="btn-playpause" onclick="togglePlay()" disabled
+              class="btn-grad w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-lg">
+              ▶
+            </button>
+            <div class="flex-1 space-y-1.5">
+              <div class="progress-track" id="progress-track" onclick="seekAudio(event)">
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
+              <div class="flex justify-between text-xs text-gray-500">
+                <span id="audio-cur">0:00</span>
+                <span id="audio-dur">0:30</span>
+              </div>
+            </div>
+          </div>
+          <p id="no-preview" class="hidden text-xs text-gray-500 text-center mt-2">Sin preview disponible</p>
+        </div>
+      </div>
+
+      <!-- Host-only audio notice (shown for guests when audioMode=host_only) -->
+      <div id="host-audio-notice" class="hidden w-full max-w-xs">
+        <div class="glass rounded-2xl p-4 text-center">
+          <div class="text-2xl mb-1">🔊</div>
+          <p class="text-gray-400 text-sm">El anfitrión controla el audio</p>
+          <p class="text-gray-600 text-xs mt-0.5">Escucha desde el dispositivo del anfitrión</p>
+        </div>
+      </div>
+
+      <!-- Host-only: song info during round -->
+      <div id="host-song-info" class="hidden w-full max-w-xs">
+        <div class="glass rounded-2xl p-4 space-y-0.5" style="border-color:rgba(139,92,246,.35)">
+          <p class="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">Solo tú ves esto</p>
+          <p id="hs-title" class="text-lg font-black leading-tight"></p>
+          <p id="hs-artist" class="text-gray-400 text-sm"></p>
+          <div class="mt-1.5">
+            <span class="text-gray-500 text-xs">Año: </span>
+            <span id="hs-year" class="text-2xl font-black gradient-text"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buzzer -->
+      <div id="buzzer-block" class="w-full max-w-xs space-y-3">
+
+        <!-- Big buzzer button -->
+        <div id="buzzer-btn-wrap">
+          <button id="btn-buzzer" onclick="pressBuzzer()"
+            class="btn-grad w-full py-8 rounded-2xl text-3xl font-black pulse-ring">
+            🔔 ¡PULSAR!
+          </button>
+        </div>
+
+        <!-- Who buzzed -->
+        <div id="buzzer-status" class="hidden glass rounded-2xl p-5 text-center">
+          <p class="text-xs text-gray-400 mb-1">Ha pulsado</p>
+          <p id="buzzer-name" class="text-3xl font-black gradient-text"></p>
+        </div>
+
+        <!-- Host: correct / wrong buttons -->
+        <div id="host-decision" class="hidden">
+          <div class="flex gap-3">
+            <button onclick="hostDecide(true)" class="flex-1 py-4 rounded-xl font-black text-white text-lg"
+              style="background:linear-gradient(135deg,#22c55e,#16a34a)">
+              ✓ Correcto
+            </button>
+            <button onclick="hostDecide(false)" class="flex-1 py-4 rounded-xl font-black text-white text-lg"
+              style="background:linear-gradient(135deg,#ef4444,#dc2626)">
+              ✗ Incorrecto
+            </button>
+          </div>
+        </div>
+
+        <!-- Guest: waiting for host decision -->
+        <div id="guest-wait-decision" class="hidden text-center text-gray-500 text-sm py-2">
+          Esperando decisión del anfitrión…
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Player status bar -->
+    <div class="glass px-4 py-3" style="border-top:1px solid rgba(255,255,255,.06)">
+      <div id="status-bar" class="flex gap-4 justify-center flex-wrap"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ ROUND RESULT ═══════════════════ -->
+  <div id="screen-round-result" class="screen flex-col items-center justify-center p-4">
+    <div class="w-full max-w-md fade-up space-y-3">
+
+      <!-- Song reveal (cover shown here for the first time) -->
+      <div id="rr-song-reveal" class="glass rounded-2xl p-5">
+        <div class="flex gap-4 items-center">
+          <img id="rr-cover" src="" alt="Portada" class="w-20 h-20 rounded-xl object-cover flex-shrink-0 bg-white/5" />
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">La canción era…</p>
+            <p id="rr-title" class="text-xl font-black leading-tight"></p>
+            <p id="rr-artist" class="text-gray-400 text-sm"></p>
+            <div class="mt-1">
+              <span class="text-gray-500 text-xs">Año: </span>
+              <span id="rr-year" class="text-2xl font-black gradient-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Round answers -->
+      <div class="glass rounded-2xl p-4">
+        <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3">Respuestas</p>
+        <div id="rr-answers" class="space-y-2"></div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="glass rounded-2xl p-4">
+        <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3">Clasificación</p>
+        <div id="rr-board" class="space-y-2"></div>
+      </div>
+
+      <!-- Action area -->
+      <!-- Host: advance button -->
+      <div id="rr-host-action" class="hidden">
+        <button id="btn-next-round" onclick="hostAdvance()"
+          class="btn-grad w-full py-3.5 rounded-xl text-base pulse-ring"></button>
+      </div>
+      <!-- Guest: waiting -->
+      <div id="rr-guest-wait" class="hidden text-center text-gray-500 text-sm">
+        <div class="flex justify-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:0s"></span>
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:.2s"></span>
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:.4s"></span>
+        </div>
+        Esperando al anfitrión…
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ GAME OVER ═══════════════════ -->
+  <div id="screen-game-over" class="screen flex-col items-center justify-center p-4">
+    <div class="w-full max-w-md fade-up space-y-4">
+      <div class="text-center">
+        <div class="text-6xl mb-2">🏆</div>
+        <h1 class="text-4xl font-black gradient-text">¡Fin del juego!</h1>
+      </div>
+      <div id="podium" class="flex items-end justify-center gap-2" style="height:160px"></div>
+      <div class="glass rounded-2xl p-5">
+        <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3">Clasificación final</p>
+        <div id="go-board" class="space-y-2"></div>
+      </div>
+      <!-- Host: nueva partida / Guest: espera -->
+      <div id="go-host-action" class="hidden">
+        <button onclick="playAgain()" class="btn-grad w-full py-3.5 rounded-xl text-base">🎮 Nueva partida</button>
+      </div>
+      <div id="go-guest-wait" class="hidden glass rounded-2xl py-4 text-center text-gray-500 text-sm">
+        <div class="flex justify-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:0s"></span>
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:.2s"></span>
+          <span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style="animation-delay:.4s"></span>
+        </div>
+        Esperando al anfitrión para la siguiente partida…
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+  <script>
+    'use strict';
+
+    // itty-sockets (itty.ws) client - tiny WebSocket relay
+    const ittySockets = (url, options = {}) => {
+      let ws, queue = [], handlers = {};
+      const open = () => {
+        if (ws && ws.readyState < 2) return ws;
+        const fullUrl = (/^wss?:/.test(url) ? url : "wss://itty.ws/c/" + url) + (url.includes("?") ? "&" : "?") + new URLSearchParams(options);
+        console.log('[Socket] Connecting to:', fullUrl);
+        ws = new WebSocket(fullUrl);
+        ws.onmessage = e => {
+          try {
+            const { type, message, ...rest } = JSON.parse(e.data);
+            if (type === 'message') {
+              (handlers['message'] || []).forEach(h => h({ message, ...rest }));
+              (handlers['*'] || []).forEach(h => h({ type, message, ...rest }));
+            }
+          } catch (err) { console.warn('[Socket] Message parse error:', err); }
+        };
+        ws.onopen = () => {
+          console.log('[Socket] Connected');
+          while (queue.length) ws.send(JSON.stringify(queue.shift()));
+        };
+        ws.onclose = () => { console.log('[Socket] Disconnected'); ws = null; };
+        ws.onerror = e => console.warn('[Socket] Error:', e);
+        return ws;
+      };
+      const t = {
+        on: (type, h) => { handlers[type] = handlers[type] || []; handlers[type].push(h); return t; },
+        send: (msg, to) => {
+          const e = to ? { type: "message", message: msg, to } : { type: "message", message: msg };
+          if (ws && ws.readyState === 1) ws.send(JSON.stringify(e));
+          else { console.log('[Socket] Queueing message (socket not ready)'); queue.push(e); }
+          return t;
+        },
+        close: () => { ws && ws.close(); return t; },
+        open,
+        get socket() { return open(); }
+      };
+      return t;
+    };
+
+    // ─────────────────────────────────────────
+    // UTILS
+    // ─────────────────────────────────────────
+    const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+    const roomCode = () => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({ length: 6 }, () => ch[Math.random() * ch.length | 0]).join(''); };
+    const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const fmt = s => `0:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+    function initSocket() {
+      if (socket || !room || !me) return;
+      console.log('[Socket] Initializing for room:', room.code);
+      socket = ittySockets('hityear-' + room.code, { as: me.name });
+      socket.on('message', ({ message, alias, uid }) => {
+        console.log(`[Socket] Message from ${alias || uid}:`, message);
+        if (message.type === 'state') updateState(message.state);
+        if (message.type === 'buzzer' && gs?.phase === 'playing' && !gs.buzzer) {
+          gs = { ...gs, buzzer: message.buzzer };
+          updateStatusBar(gs);
+          if (host) checkRoundEnd(gs);
+        }
+      });
+      socket.open();
+      if (window._socketTimer) clearInterval(window._socketTimer);
+      window._socketTimer = setInterval(() => socket.open(), 8000);
+    }
+
+    function calcBuzzerPoints(buzzedAt, startMs, totalSecs) {
+      const elapsed = Math.min((buzzedAt - startMs) / 1000, totalSecs);
+      return 1000 + Math.max(0, Math.round(200 * (1 - elapsed / totalSecs)));
+    }
+
+    // ─────────────────────────────────────────
+    // THEME LOADING
+    // ─────────────────────────────────────────
+    let themeData = null, loadedThemeId = null;
+
+    function loadScript(src) {
+      return new Promise((res, rej) => {
+        if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+        const s = document.createElement('script');
+        s.src = src; s.onload = res; s.onerror = () => rej(new Error('No se cargó: ' + src));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function ensureTheme(themeId) {
+      if (loadedThemeId === themeId && themeData) return;
+      const cfg = HIT_THE_YEAR_THEMES.find(t => t.id === themeId);
+      if (!cfg) throw new Error('Tema desconocido: ' + themeId);
+      await loadScript(`data/${themeId}.js`);
+      themeData = window[cfg.variable];
+      loadedThemeId = themeId;
+    }
+
+    // ─────────────────────────────────────────
+    // DEEZER  (JSONP — sin CORS)
+    // ─────────────────────────────────────────
+    const deezerCache = new Map();
+
+    function deezerJsonp(deezerId) {
+      return new Promise((resolve, reject) => {
+        const cb = `_dz${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement('script');
+        const timer = setTimeout(() => {
+          cleanup(); reject(new Error('Deezer timeout'));
+        }, 8000);
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[cb];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+        window[cb] = (data) => { cleanup(); resolve(data); };
+        script.onerror = () => { cleanup(); reject(new Error('Deezer script error')); };
+        script.src = `https://api.deezer.com/track/${deezerId}?output=jsonp&callback=${cb}`;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function getDeezerInfo(deezerId) {
+      if (deezerCache.has(deezerId)) return deezerCache.get(deezerId);
+      try {
+        const d = await deezerJsonp(deezerId);
+        if (d.error) return null;
+        const info = { preview: d.preview || '', cover: d.album?.cover_medium || d.album?.cover_big || '' };
+        deezerCache.set(deezerId, info);
+        return info;
+      } catch (e) { console.warn('Deezer JSONP:', e); return null; }
+    }
+
+    // ─────────────────────────────────────────
+    // AUDIO PLAYER
+    // ─────────────────────────────────────────
+    const audio = new Audio();
+
+    audio.addEventListener('timeupdate', () => {
+      const pct = audio.duration ? (audio.currentTime / audio.duration * 100) : 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('audio-cur').textContent = fmt(audio.currentTime);
+      if (audio.duration) document.getElementById('audio-dur').textContent = fmt(audio.duration);
+    });
+    audio.addEventListener('play', () => { document.getElementById('btn-playpause').textContent = '⏸'; setViz(true); });
+    audio.addEventListener('pause', () => { document.getElementById('btn-playpause').textContent = '▶'; setViz(false); });
+    audio.addEventListener('ended', () => { document.getElementById('btn-playpause').textContent = '↺'; setViz(false); document.getElementById('progress-fill').style.width = '100%'; });
+    audio.addEventListener('error', () => { document.getElementById('no-preview').classList.remove('hidden'); document.getElementById('btn-playpause').disabled = true; });
+
+    function setViz(playing) {
+      ['vb1', 'vb2', 'vb3', 'vb4', 'vb5', 'vb6', 'vb7', 'vb8'].forEach(id => document.getElementById(id).classList.toggle('paused', !playing));
+    }
+
+    function togglePlay() {
+      if (audio.ended || audio.currentTime >= audio.duration - 0.1) audio.currentTime = 0;
+      audio.paused ? audio.play() : audio.pause();
+    }
+
+    function seekAudio(event) {
+      if (!audio.duration) return;
+      const rect = document.getElementById('progress-track').getBoundingClientRect();
+      audio.currentTime = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) * audio.duration;
+    }
+
+    async function loadRoundAudio(songObj) {
+      audio.pause(); audio.src = '';
+      const pp = document.getElementById('btn-playpause');
+      pp.textContent = '▶'; pp.disabled = true;
+      document.getElementById('progress-fill').style.width = '0%';
+      document.getElementById('audio-cur').textContent = '0:00';
+      document.getElementById('audio-dur').textContent = '0:30';
+      document.getElementById('no-preview').classList.add('hidden');
+      setViz(false);
+
+      const info = await getDeezerInfo(songObj.deezerId);
+      if (info?.preview) {
+        audio.src = info.preview;
+        audio.load();
+        pp.disabled = false;
+        audio.play().catch(() => { });
+      } else {
+        document.getElementById('no-preview').classList.remove('hidden');
+      }
+    }
+
+    // ─────────────────────────────────────────
+    // API REST  (alon.one/juegos/api)
+    // ─────────────────────────────────────────
+    const API_BASE = 'https://alon.one/juegos/api';
+    const GAME_ID = 9;
+
+    // BroadcastChannel: notifica otras pestañas del mismo navegador
+    // para actualizaciones instantáneas sin esperar el polling
+    const BC = new BroadcastChannel('hityear');
+
+    const API = {
+
+      async createUser(username) {
+        try {
+          const r = await fetch(`${API_BASE}/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email: `hy.${uuid()}@hityear.app`, password: uuid() })
+          });
+          const d = await r.json();
+          // Acepta cualquier campo que devuelva el servidor
+          return { user_id: d.user_id || d.id || d.uuid || uuid() };
+        } catch (e) {
+          console.warn('createUser falló, usando UUID local:', e);
+          return { user_id: uuid() };
+        }
+      },
+
+      async createRoom(hostId, hostName) {
+        const initialState = {
+          phase: 'lobby', themeId: null, audioMode: 'all',
+          round: 0, totalRounds: 5, timePerTurn: 30,
+          songIndices: [], currentSongIndex: 0,
+          timerEnd: null, roundEndTime: null,
+          answers: {}, roundScores: {}, totalScores: {},
+          players: { [hostId]: { name: hostName, host: true } }
+        };
+        const r = await fetch(`${API_BASE}/rooms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ game_id: GAME_ID, host_id: hostId, game_state: initialState })
+        });
+        const d = await r.json();
+        BC.postMessage({ code: d.room_code });
+        return d; // { room_id, room_code, message }
+      },
+
+      async getRoom(code) {
+        const r = await fetch(`${API_BASE}/rooms/${code}`);
+        if (!r.ok) return null;
+        const d = await r.json();
+        if (d.error || d.code === 404) return null;
+        // Normaliza la respuesta: el estado del juego vive en game_state
+        return {
+          id: d.room_id || d.id,
+          code: d.room_code || code,
+          state: d.game_state || {}
+        };
+      },
+
+      async joinRoom(code, userId, username) {
+        const r = await fetch(`${API_BASE}/rooms/${code}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId })
+        });
+        if (!r.ok) throw new Error('Sala no encontrada');
+        // Añadir jugador al game_state.players
+        const room = await this.getRoom(code);
+        if (room) {
+          const st = { ...room.state };
+          if (!st.players) st.players = {};
+          if (!st.totalScores) st.totalScores = {};
+          st.players[userId] = { name: username, host: false };
+          st.totalScores[userId] = st.totalScores[userId] ?? 0;
+          await this.patchState(code, st);
+        }
+        return { ok: true };
+      },
+
+      async patchState(code, patch) {
+        // El servidor reemplaza game_state por completo, no hace merge.
+        // Fusionamos el patch sobre el gs actual para no perder campos.
+        const fullState = { ...(gs || {}), ...patch };
+        const r = await fetch(`${API_BASE}/rooms/${code}/state`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ game_state: fullState })
+        });
+        BC.postMessage({ code }); // avisar pestañas locales
+        if (socket) socket.send({ type: 'state', state: fullState }); // Broadcast via IttySockets
+        return r.json();
+      },
+
+      async saveScore(userId, roomId, score, meta) {
+        try {
+          const r = await fetch(`${API_BASE}/scores`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, game_id: GAME_ID, room_id: roomId, score_value: score, metadata: meta })
+          });
+          return r.json();
+        } catch (e) { return { ok: false }; }
+      }
+    };
+
+    // ─────────────────────────────────────────
+    // APP STATE
+    // ─────────────────────────────────────────
+    let me = null, room = null, host = false, gs = null, socket = null;
+    let myAnswer = null, pollId = null, timerId = null;
+    let lastPhase = null, lastRound = -1, roundEndQueued = false;
+    let activeTab = 'create', cfgAudioMode = 'all';
+
+    // ─────────────────────────────────────────
+    // UI HELPERS
+    // ─────────────────────────────────────────
+    const show = name => { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById('screen-' + name).classList.add('active'); };
+
+    function setTab(tab) {
+      activeTab = tab;
+      const isC = tab === 'create';
+      document.getElementById('tab-create').className = `flex-1 py-2.5 text-sm font-semibold ${isC ? 'tab-active' : 'tab-inactive transition-colors'}`;
+      document.getElementById('tab-join').className = `flex-1 py-2.5 text-sm font-semibold ${!isC ? 'tab-active' : 'tab-inactive transition-colors'}`;
+      document.getElementById('sec-create').classList.toggle('hidden', !isC);
+      document.getElementById('sec-join').classList.toggle('hidden', isC);
+    }
+
+    function setAudioMode(mode) {
+      cfgAudioMode = mode;
+      document.getElementById('am-all').className = `flex-1 py-2.5 text-xs font-semibold ${mode === 'all' ? 'tab-active' : 'tab-inactive transition-colors'} flex items-center justify-center gap-1.5`;
+      document.getElementById('am-host').className = `flex-1 py-2.5 text-xs font-semibold ${mode === 'host_only' ? 'tab-active' : 'tab-inactive transition-colors'} flex items-center justify-center gap-1.5`;
+      document.getElementById('audio-mode-hint').textContent = mode === 'all' ? 'Cada jugador escucha en su dispositivo' : 'Solo el dispositivo del anfitrión reproduce música';
+    }
+
+    function showErr(msg) { const el = document.getElementById('welcome-err'); el.textContent = msg; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3500); }
+
+    // ─────────────────────────────────────────
+    // ROUTER
+    // ─────────────────────────────────────────
+    const Router = {
+      push(path) { history.pushState({ path }, '', '#' + path); this._title(path); },
+      replace(path) { history.replaceState({ path }, '', '#' + path); this._title(path); },
+      current() { return window.location.hash.replace(/^#/, '') || '/'; },
+      roomCode() { const m = this.current().match(/^\/room\/([A-Z0-9]+)$/i); return m ? m[1].toUpperCase() : null; },
+      _title(path) { const m = path.match(/^\/room\/([A-Z0-9]+)$/i); document.title = m ? `HitYear — Sala ${m[1]}` : 'HitYear — Adivina el Año'; }
+    };
+
+    window.addEventListener('popstate', () => {
+      const code = Router.roomCode();
+      if (!code && room) leaveRoom();
+      else if (code && !room) { setTab('join'); document.getElementById('inp-code').value = code; show('welcome'); }
+    });
+
+    function leaveRoom() {
+      stopPoll();
+      if (timerId) { clearInterval(timerId); timerId = null; }
+      audio.pause(); audio.src = '';
+      if (socket) { socket.close(); socket = null; }
+      room = null; host = false; gs = null; lastPhase = null; lastRound = -1; roundEndQueued = false; myAnswer = null;
+      Router.replace('/');
+      show('welcome');
+    }
+
+    // ─────────────────────────────────────────
+    // SHARE / LINK
+    // ─────────────────────────────────────────
+    function getShareUrl() {
+      const u = new URL(window.location.href);
+      u.hash = `/room/${room.code}`;
+      u.search = '';
+      return u.toString();
+    }
+
+    async function copyLink() {
+      try {
+        await navigator.clipboard.writeText(getShareUrl());
+        const btn = document.getElementById('btn-copy-link');
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Copiado';
+        setTimeout(() => { btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg> Copiar enlace'; }, 2000);
+      } catch (e) { console.warn(e); }
+    }
+
+    async function shareRoom() {
+      if (!navigator.share) return;
+      try {
+        await navigator.share({
+          title: 'HitYear — Adivina el Año',
+          text: `¡Juega conmigo en HitYear! Usa el código ${room.code} o abre el enlace.`,
+          url: getShareUrl()
+        });
+      } catch (e) { }
+    }
+
+    function populateThemeSelect() {
+      document.getElementById('cfg-theme').innerHTML =
+        HIT_THE_YEAR_THEMES.map(t => `<option value="${t.id}" data-var="${t.variable}">${t.label}</option>`).join('');
+    }
+
+    // ─────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────
+    (function init() {
+      // Reutilizar usuario guardado si el nombre no cambia, para no crear uno nuevo cada sesión.
+      const saved = localStorage.getItem('hy_user');
+      if (saved) {
+        try {
+          me = JSON.parse(saved);
+          document.getElementById('inp-username').value = me.name || '';
+        } catch (e) { localStorage.removeItem('hy_user'); }
+      }
+      populateThemeSelect();
+
+      // Show web share button if API is available
+      if (navigator.share) document.getElementById('btn-webshare').classList.remove('hidden');
+
+      // Handle invite link (#/room/CODE or legacy ?room=CODE)
+      const inviteCode = Router.roomCode() || (new URLSearchParams(window.location.search).get('room'));
+      if (inviteCode) {
+        setTab('join');
+        document.getElementById('inp-code').value = inviteCode.toUpperCase();
+        Router.replace('/room/' + inviteCode.toUpperCase());
+      } else {
+        Router.replace('/');
+      }
+    })();
+
+    // ─────────────────────────────────────────
+    // WELCOME
+    // ─────────────────────────────────────────
+    async function handleEnter() {
+      const name = document.getElementById('inp-username').value.trim();
+      if (!name) return showErr('Introduce tu nombre');
+
+      const btn = document.querySelector('#screen-welcome .btn-grad');
+      if (btn) { btn.disabled = true; btn.textContent = 'Conectando…'; }
+
+      // Solo crear usuario en la API si el nombre cambió o no hay usuario guardado.
+      if (!me || me.name !== name) {
+        try {
+          const res = await API.createUser(name);
+          if (!res.user_id) throw new Error('Sin user_id');
+          me = { id: res.user_id, name };
+          localStorage.setItem('hy_user', JSON.stringify(me));
+        } catch (e) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+          return showErr('No se pudo crear el usuario: ' + e.message);
+        }
+      }
+
+      try {
+        if (activeTab === 'create') {
+          const res = await API.createRoom(me.id, me.name);
+          if (!res.room_code) throw new Error('Sin room_code');
+          room = { id: res.room_id, code: res.room_code };
+          host = true;
+        } else {
+          const code = document.getElementById('inp-code').value.trim().toUpperCase();
+          if (!code) { if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; } return showErr('Introduce el código'); }
+          const r = await API.getRoom(code);
+          if (!r) { if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; } return showErr('Sala no encontrada'); }
+          room = { id: r.id, code }; host = false;
+          await API.joinRoom(code, me.id, me.name);
+        }
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+        return showErr(e.message || 'Error al acceder a la sala');
+      }
+
+      if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+      Router.push('/room/' + room.code);
+      enterLobby();
+    }
+
+    // ─────────────────────────────────────────
+    // LOBBY
+    // ─────────────────────────────────────────
+    function enterLobby() {
+      show('lobby');
+      // No resetear lastPhase aquí para no crear bucle cuando tick() nos llama.
+      // tick() ya gestiona lastPhase antes de llamar a enterLobby.
+      roundEndQueued = false; myAnswer = null;
+      audio.pause(); audio.src = '';
+      document.getElementById('lobby-code').textContent = room.code;
+      document.getElementById('host-cfg').classList.toggle('hidden', !host);
+      document.getElementById('host-actions').classList.toggle('hidden', !host);
+      document.getElementById('guest-wait').classList.toggle('hidden', host);
+
+      // IttySockets: Real-time sync
+      if (!socket) {
+        socket = ittySockets('hityear-' + room.code, { as: me.name });
+        socket.on('message', ({ message }) => {
+          if (message.type === 'state') updateState(message.state);
+          if (message.type === 'buzzer' && gs?.phase === 'playing' && !gs.buzzer) {
+            gs = { ...gs, buzzer: message.buzzer };
+            updateStatusBar(gs);
+            if (host) checkRoundEnd(gs);
+          }
+        });
+        setInterval(socket.open, 5000); // Reconnection loop
+      }
+
+      if (!pollId) startPoll(); // no reiniciar si el polling ya está activo
+    }
+
+    function renderLobby(state) {
+      const players = state.players || {};
+      document.getElementById('lobby-players').innerHTML =
+        Object.entries(players).map(([id, p]) => `
+      <div class="flex items-center gap-3 py-2 px-3 rounded-xl glass">
+        <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-xs font-bold flex-shrink-0">${p.name[0].toUpperCase()}</div>
+        <span class="font-medium text-sm flex-1">${p.name}</span>
+        ${p.host ? '<span class="text-xs gradient-text font-semibold">HOST</span>' : ''}
+        ${id === me.id ? '<span class="text-xs text-gray-500">(tú)</span>' : ''}
+      </div>`).join('') || '<p class="text-gray-600 text-sm">Conectando…</p>';
+    }
+
+    async function startGame() {
+      const sel = document.getElementById('cfg-theme');
+      const themeId = sel.value;
+      const totalRounds = +document.getElementById('cfg-rounds').value;
+      const timePerTurn = +document.getElementById('cfg-time').value;
+      await ensureTheme(themeId);
+      const indices = shuffle(themeData.map((_, i) => i)).slice(0, totalRounds);
+      const totalScores = {};
+      Object.keys(gs?.players || {}).forEach(id => { totalScores[id] = 0; });
+      await API.patchState(room.code, {
+        phase: 'playing', themeId, audioMode: cfgAudioMode,
+        round: 1, totalRounds, timePerTurn,
+        songIndices: indices, currentSongIndex: 0,
+        timerEnd: Date.now() + timePerTurn * 1000,
+        roundEndTime: null, buzzer: null, answers: {}, roundScores: {}, totalScores
+      });
+    }
+
+    // ─────────────────────────────────────────
+    // POLLING
+    // ─────────────────────────────────────────
+    function startPoll() {
+      stopPoll();
+      BC.onmessage = e => { if (e.data.code === room?.code) tick(); };
+      pollId = setInterval(tick, 2500);
+      tick();
+    }
+    function stopPoll() { if (pollId) { clearInterval(pollId); pollId = null; } BC.onmessage = null; }
+
+    async function tick() {
+      if (!room) return;
+      const r = await API.getRoom(room.code);
+      if (!r) return;
+      updateState(r.state);
+    }
+
+    async function updateState(newState) {
+      if (!newState) return;
+      gs = newState;
+      const { phase, round } = gs;
+      if (gs.themeId && gs.themeId !== loadedThemeId) {
+        try { await ensureTheme(gs.themeId); } catch (e) { console.error(e); return; }
+      }
+      const changed = phase !== lastPhase || round !== lastRound;
+      if (changed) {
+        lastPhase = phase; lastRound = round; roundEndQueued = false;
+        // Keep hash in sync with game phase
+        if (room && Router.roomCode() !== room.code) Router.replace('/room/' + room.code);
+        if (phase === 'lobby') enterLobby();   // también desde game_end: todos vuelven al lobby
+        if (phase === 'playing') enterPlaying(gs);
+        if (phase === 'round_end') enterRoundResult(gs);
+        if (phase === 'game_end') enterGameOver(gs);
+      } else {
+        if (phase === 'lobby') renderLobby(gs);
+        if (phase === 'playing') { updateStatusBar(gs); if (host) checkRoundEnd(gs); }
+      }
+    }
+
+    // ─────────────────────────────────────────
+    // PLAYING
+    // ─────────────────────────────────────────
+    function enterPlaying(state) {
+      myAnswer = null;
+      show('playing');
+      document.getElementById('p-round').textContent = state.round;
+      document.getElementById('p-total').textContent = state.totalRounds;
+      document.getElementById('p-room').textContent = room.code;
+
+      // Reset buzzer UI for new round (host never has the buzzer button, but does see the decision UI)
+      document.getElementById('buzzer-btn-wrap').classList.toggle('hidden', host);
+      document.getElementById('btn-buzzer').disabled = false;
+      document.getElementById('buzzer-status').classList.add('hidden');
+      document.getElementById('host-decision').classList.add('hidden');
+      document.getElementById('guest-wait-decision').classList.add('hidden');
+
+      // Host sees song info; players don't
+      const hostInfoEl = document.getElementById('host-song-info');
+      if (host && themeData && state.songIndices) {
+        const songObj = themeData[state.songIndices[state.currentSongIndex]];
+        if (songObj) {
+          document.getElementById('hs-title').textContent = songObj.title;
+          document.getElementById('hs-artist').textContent = songObj.artist;
+          document.getElementById('hs-year').textContent = songObj.year;
+          hostInfoEl.classList.remove('hidden');
+        }
+      } else {
+        hostInfoEl.classList.add('hidden');
+      }
+
+      const canHear = state.audioMode !== 'host_only' || host;
+      document.getElementById('player-block').classList.toggle('hidden', !canHear);
+      document.getElementById('host-audio-notice').classList.toggle('hidden', canHear);
+
+      startTimer(state.timerEnd, state.timePerTurn);
+      updateStatusBar(state);
+
+      if (canHear && themeData && state.songIndices) {
+        const songObj = themeData[state.songIndices[state.currentSongIndex]];
+        if (songObj) loadRoundAudio(songObj);
+      }
+    }
+
+    function updateStatusBar(state) {
+      const players = state.players || {};
+      const buz = state.buzzer;
+      document.getElementById('status-bar').innerHTML =
+        Object.entries(players).map(([id, p]) => {
+          const buzzed = buz && buz.userId === id;
+          return `<div class="flex flex-col items-center gap-1">
+        <div class="w-8 h-8 rounded-full ${buzzed ? 'bg-yellow-400' : 'bg-white/10'} flex items-center justify-center text-xs font-bold transition-colors">${buzzed ? '🔔' : p.name[0].toUpperCase()}</div>
+        <span class="text-xs ${buzzed ? 'text-yellow-300' : 'text-gray-500'}">${p.name}</span>
+      </div>`;
+        }).join('');
+
+      if (buz) {
+        document.getElementById('btn-buzzer').disabled = true;
+        document.getElementById('buzzer-btn-wrap').classList.add('hidden');
+        document.getElementById('buzzer-status').classList.remove('hidden');
+        document.getElementById('buzzer-name').textContent = buz.name;
+        if (host) {
+          document.getElementById('host-decision').classList.remove('hidden');
+          document.getElementById('guest-wait-decision').classList.add('hidden');
+        } else {
+          document.getElementById('host-decision').classList.add('hidden');
+          document.getElementById('guest-wait-decision').classList.remove('hidden');
+        }
+      }
+    }
+
+    function startTimer(timerEnd, totalSecs) {
+      if (timerId) { clearInterval(timerId); timerId = null; }
+      const circ = 2 * Math.PI * 70; // r=70 → 439.8
+      const circle = document.getElementById('tcircle');
+      const display = document.getElementById('t-num');
+      function frame() {
+        const rem = Math.max(0, (timerEnd - Date.now()) / 1000);
+        display.textContent = Math.ceil(rem);
+        circle.style.strokeDashoffset = circ * (1 - rem / totalSecs);
+        circle.style.stroke = rem <= 10 ? '#EF4444' : 'url(#tg)';
+        display.style.color = rem <= 10 ? '#EF4444' : '#fff';
+        if (rem <= 0) { clearInterval(timerId); timerId = null; }
+      }
+      frame(); timerId = setInterval(frame, 250);
+    }
+
+    async function pressBuzzer() {
+      if (host || myAnswer || gs?.buzzer) return;
+      myAnswer = true; // prevent double press
+      document.getElementById('btn-buzzer').disabled = true;
+      const buz = { userId: me.id, name: me.name, at: Date.now() };
+      if (socket) socket.send({ type: 'buzzer', buzzer: buz });
+      await API.patchState(room.code, { buzzer: buz });
+    }
+
+    async function hostDecide(correct) {
+      const state = gs;
+      const buz = state.buzzer;
+      const roundScores = {}, totalScores = { ...(state.totalScores || {}) };
+      Object.keys(state.players || {}).forEach(id => { roundScores[id] = 0; });
+      if (correct && buz) {
+        const startMs = state.timerEnd - state.timePerTurn * 1000;
+        const pts = calcBuzzerPoints(buz.at, startMs, state.timePerTurn);
+        roundScores[buz.userId] = pts;
+        totalScores[buz.userId] = (totalScores[buz.userId] || 0) + pts;
+        API.saveScore(buz.userId, room.id, pts, { round: state.round });
+      }
+      audio.pause();
+      await API.patchState(room.code, { phase: 'round_end', roundScores, totalScores });
+    }
+
+    async function checkRoundEnd(state) {
+      if (roundEndQueued) return;
+      if (state.buzzer) return; // host will decide via hostDecide()
+      const expired = state.timerEnd && Date.now() >= state.timerEnd;
+      if (expired) { roundEndQueued = true; await finishRound(state); }
+    }
+
+    async function finishRound(state) {
+      // Called only on timer expiry with no buzzer — everyone gets 0 pts
+      audio.pause();
+      const roundScores = {}, totalScores = { ...(state.totalScores || {}) };
+      Object.keys(state.players || {}).forEach(id => { roundScores[id] = 0; });
+      await API.patchState(room.code, { phase: 'round_end', roundScores, totalScores });
+    }
+
+    // ─────────────────────────────────────────
+    // ROUND RESULT
+    // ─────────────────────────────────────────
+    function enterRoundResult(state) {
+      if (timerId) { clearInterval(timerId); timerId = null; }
+      audio.pause();
+      show('round-result');
+
+      const songObj = themeData[state.songIndices[state.currentSongIndex]];
+      const players = state.players || {};
+      const buz = state.buzzer;
+      const rs = state.roundScores || {};
+
+      document.getElementById('rr-title').textContent = songObj.title;
+      document.getElementById('rr-artist').textContent = songObj.artist;
+      document.getElementById('rr-year').textContent = songObj.year;
+
+      // Cover: use Deezer cache or fallback to data file
+      const cached = deezerCache.get(songObj.deezerId);
+      document.getElementById('rr-cover').src = cached?.cover || songObj.cover || '';
+
+      // Buzzer results
+      const sorted = Object.entries(players).sort((a, b) => (rs[b[0]] || 0) - (rs[a[0]] || 0));
+      document.getElementById('rr-answers').innerHTML = sorted.map(([id, p]) => {
+        const pts = rs[id] || 0;
+        const buzzed = buz && buz.userId === id;
+        const correct = buzzed && pts > 0;
+        const wrong = buzzed && pts === 0;
+        return `
+      <div class="flex items-center gap-3 py-2 px-3 rounded-xl glass ${id === me.id ? 'border border-purple-500/30' : ''}">
+        <div class="w-7 h-7 rounded-full gradient-bg flex items-center justify-center text-xs font-bold flex-shrink-0">${p.name[0].toUpperCase()}</div>
+        <span class="text-sm flex-1 font-medium">${p.name}</span>
+        ${buzzed
+            ? `<span class="font-bold ${correct ? 'text-green-400' : 'text-red-400'}">${correct ? '✓ Correcto' : '✗ Incorrecto'}</span>`
+            : `<span class="text-gray-600">—</span>`}
+        <span class="text-purple-400 font-bold text-sm">+${pts}</span>
+      </div>`;
+      }).join('') || '<p class="text-gray-500 text-sm text-center">Nadie pulsó</p>';
+
+      // Song reveal: only host sees it (players learn verbally)
+      document.getElementById('rr-song-reveal').classList.toggle('hidden', !host);
+
+      renderBoard('rr-board', state.totalScores || {}, players);
+
+      // Host action button
+      const isLastRound = state.round >= state.totalRounds;
+      document.getElementById('rr-host-action').classList.toggle('hidden', !host);
+      document.getElementById('rr-guest-wait').classList.toggle('hidden', host);
+      if (host) {
+        const btn = document.getElementById('btn-next-round');
+        btn.textContent = isLastRound ? '🏆 Ver resultados finales' : '▶ Siguiente ronda';
+      }
+    }
+
+    async function hostAdvance() {
+      const isLast = gs.round >= gs.totalRounds;
+      if (isLast) {
+        await API.patchState(room.code, { phase: 'game_end' });
+      } else {
+        await API.patchState(room.code, {
+          phase: 'playing',
+          round: gs.round + 1,
+          currentSongIndex: gs.currentSongIndex + 1,
+          timerEnd: Date.now() + gs.timePerTurn * 1000,
+          roundEndTime: null,
+          buzzer: null, answers: {}, roundScores: {}
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────
+    // GAME OVER
+    // ─────────────────────────────────────────
+    function enterGameOver(state) {
+      if (timerId) { clearInterval(timerId); timerId = null; }
+      audio.pause();
+      // No paramos el polling: cuando el anfitrión inicie nueva partida,
+      // todos los jugadores volverán automáticamente al lobby vía tick().
+      show('game-over');
+      const players = state.players || {};
+      const scores = state.totalScores || {};
+      const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]).map(([id, sc]) => ({ id, sc, name: players[id]?.name || '?' }));
+      const medals = ['🥇', '🥈', '🥉'];
+      const order = [1, 0, 2], heights = ['h-24', 'h-32', 'h-20'], opac = ['opacity-70', 'opacity-100', 'opacity-50'];
+      document.getElementById('podium').innerHTML = order.map((pos, di) => {
+        const p = ranked[pos]; if (!p) return '';
+        return `<div class="flex flex-col items-center gap-1 flex-1 max-w-[90px]">
+      ${pos === 0 ? '<div class="text-xl animate-bounce">👑</div>' : '<div class="h-7"></div>'}
+      <div class="w-9 h-9 rounded-full gradient-bg flex items-center justify-center font-bold text-sm">${p.name[0].toUpperCase()}</div>
+      <span class="text-xs font-semibold truncate w-full text-center">${p.name}</span>
+      <span class="text-xs gradient-text font-bold">${p.sc}pts</span>
+      <div class="${heights[di]} w-full gradient-bg ${opac[di]} rounded-t-xl flex items-center justify-center text-xl">${medals[pos] || ''}</div>
+    </div>`;
+      }).join('');
+      renderBoard('go-board', scores, players);
+      // Mostrar botón o espera según rol
+      document.getElementById('go-host-action').classList.toggle('hidden', !host);
+      document.getElementById('go-guest-wait').classList.toggle('hidden', host);
+    }
+
+    function renderBoard(elId, scores, players) {
+      const medals = ['🥇', '🥈', '🥉'];
+      document.getElementById(elId).innerHTML =
+        Object.entries(scores).sort((a, b) => b[1] - a[1]).map(([id, sc], i) => {
+          const p = players[id];
+          return `<div class="flex items-center gap-3 py-2 px-3 rounded-xl glass ${id === me.id ? 'border border-purple-500/30' : ''}">
+        <span class="w-7 text-base">${medals[i] || (i + 1) + '.'}</span>
+        <span class="text-sm flex-1 font-medium">${p?.name || '?'} ${id === me.id ? '<span class="text-gray-500 text-xs">(tú)</span>' : ''}</span>
+        <span class="gradient-text font-bold">${sc}</span>
+        <span class="text-gray-600 text-xs">pts</span>
+      </div>`;
+        }).join('');
+    }
+
+    async function playAgain() {
+      if (!host) return; // los invitados esperan: el polling detectará el cambio a lobby
+      // Reinicia el estado de la sala manteniendo los mismos jugadores (gs.players se
+      // preserva automáticamente en patchState mediante la fusión con gs).
+      await API.patchState(room.code, {
+        phase: 'lobby', themeId: null, round: 0,
+        buzzer: null, answers: {}, roundScores: {}, totalScores: {},
+        songIndices: [], timerEnd: null, roundEndTime: null
+      });
+      // tick() detectará phase='lobby' y llamará enterLobby() para todos
+    }
+
+    // ─────────────────────────────────────────
+    // KEYBOARD
+    // ─────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && document.getElementById('screen-welcome').classList.contains('active')) handleEnter();
+      if (e.key === ' ' && document.getElementById('screen-playing').classList.contains('active')) { e.preventDefault(); if (!gs?.buzzer) pressBuzzer(); else togglePlay(); }
+    });
+  </script>
+</body>
+
+</html>
