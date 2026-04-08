@@ -1,0 +1,220 @@
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background: #080812;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #8B5CF6, #EC4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.btn-grad {
+  background: linear-gradient(135deg, #8B5CF6, #EC4899);
+  color: #fff;
+  font-weight: 700;
+  transition: all .2s;
+  cursor: pointer;
+}
+
+.btn-grad:hover:not(:disabled) {
+  opacity: .9;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, .35);
+}
+
+.btn-grad:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .15);
+  color: #fff;
+  font-weight: 600;
+  transition: all .2s;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, .14);
+}
+
+.screen {
+  display: none;
+  min-height: 100vh;
+}
+
+.screen.active {
+  display: flex;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+.fade-up {
+  animation: fadeUp .35s ease-out;
+}
+
+@keyframes musicBounce {
+
+  0%,
+  100% {
+    transform: scaleY(1)
+  }
+
+  50% {
+    transform: scaleY(.25)
+  }
+}
+
+.music-bar {
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #8B5CF6, #EC4899);
+  animation: musicBounce var(--d, .8s) ease-in-out infinite;
+}
+
+.music-bar.paused {
+  animation-play-state: paused;
+}
+
+@keyframes pulseBorder {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, .5)
+  }
+
+  50% {
+    box-shadow: 0 0 0 12px rgba(139, 92, 246, 0)
+  }
+}
+
+.pulse-ring {
+  animation: pulseBorder 1.8s infinite;
+}
+
+.range-styled {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+.range-styled::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, .12);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.range-styled::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8B5CF6, #EC4899);
+  cursor: pointer;
+}
+
+.range-styled::-moz-range-track {
+  background: rgba(255, 255, 255, .12);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.range-styled::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8B5CF6, #EC4899);
+  border: none;
+  cursor: pointer;
+}
+
+.timer-ring {
+  transform: rotate(-90deg);
+}
+
+.timer-circle {
+  transition: stroke-dashoffset 1s linear, stroke .5s;
+}
+
+.progress-track {
+  background: rgba(255, 255, 255, .1);
+  border-radius: 4px;
+  height: 6px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8B5CF6, #EC4899);
+  border-radius: 4px;
+  transition: width .25s linear;
+  width: 0%;
+}
+
+select.styled {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, .06) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B5CF6' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 40px 10px 14px;
+  width: 100%;
+  font-size: .95rem;
+  cursor: pointer;
+}
+
+select.styled option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+select.styled:focus {
+  outline: none;
+  border-color: #8B5CF6;
+}
+
+/* Tab toggle helper */
+.tab-active {
+  background: linear-gradient(135deg, #8B5CF6, #EC4899);
+  color: #fff;
+}
+
+.tab-inactive {
+  color: #9ca3af;
+}
+
+.tab-inactive:hover {
+  color: #fff;
+}
