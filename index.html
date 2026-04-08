@@ -376,17 +376,6 @@
           <div class="flex justify-between text-xs text-gray-600 mt-1"><span>2</span><span>15</span></div>
         </div>
 
-        <!-- Time per round -->
-        <div>
-          <div class="flex justify-between text-sm mb-2">
-            <span class="text-gray-300">Segundos por ronda</span>
-            <span id="val-time" class="gradient-text font-bold">30s</span>
-          </div>
-          <input type="range" id="cfg-time" min="15" max="60" step="15" value="30" class="range-styled"
-            oninput="document.getElementById('val-time').textContent=this.value+'s'" />
-          <div class="flex justify-between text-xs text-gray-600 mt-1"><span>15s</span><span>60s</span></div>
-        </div>
-
         <!-- Audio mode -->
         <div>
           <label class="block text-xs text-gray-400 mb-2">¿Quién escucha la música?</label>
@@ -432,25 +421,6 @@
 
     <!-- Main content -->
     <div class="flex-1 flex flex-col items-center justify-center px-4 py-4 gap-5">
-
-      <!-- Timer ring (big) -->
-      <div class="relative flex items-center justify-center flex-shrink-0">
-        <svg width="160" height="160" class="timer-ring" style="overflow:visible">
-          <defs>
-            <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#8B5CF6" />
-              <stop offset="100%" stop-color="#EC4899" />
-            </linearGradient>
-          </defs>
-          <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7" />
-          <circle id="tcircle" cx="80" cy="80" r="70" fill="none" stroke="url(#tg)" stroke-width="7"
-            stroke-dasharray="439.8" stroke-dashoffset="0" stroke-linecap="round" class="timer-circle" />
-        </svg>
-        <div class="absolute text-center">
-          <div id="t-num" class="text-5xl font-black leading-none">30</div>
-          <div class="text-xs text-gray-500 mt-1">seg</div>
-        </div>
-      </div>
 
       <!-- Music visualizer (shown always) -->
       <div class="flex items-end gap-1" style="height:28px">
@@ -511,11 +481,18 @@
       <!-- Buzzer -->
       <div id="buzzer-block" class="w-full max-w-xs space-y-3">
 
-        <!-- Big buzzer button -->
+        <!-- Big buzzer button (players only) -->
         <div id="buzzer-btn-wrap">
           <button id="btn-buzzer" onclick="pressBuzzer()"
             class="btn-grad w-full py-8 rounded-2xl text-3xl font-black pulse-ring">
             🔔 ¡PULSAR!
+          </button>
+        </div>
+
+        <!-- Host: pass without points (shown when nobody has buzzed) -->
+        <div id="host-pass-btn" class="hidden">
+          <button onclick="hostPass()" class="btn-ghost w-full py-3.5 rounded-xl text-base">
+            ⏭ Pasar sin puntos
           </button>
         </div>
 
@@ -700,10 +677,6 @@
       window._socketTimer = setInterval(() => socket.open(), 8000);
     }
 
-    function calcBuzzerPoints(buzzedAt, startMs, totalSecs) {
-      const elapsed = Math.min((buzzedAt - startMs) / 1000, totalSecs);
-      return 1000 + Math.max(0, Math.round(200 * (1 - elapsed / totalSecs)));
-    }
 
     // ─────────────────────────────────────────
     // THEME LOADING
@@ -809,7 +782,6 @@
         audio.src = info.preview;
         audio.load();
         pp.disabled = false;
-        audio.play().catch(() => { });
       } else {
         document.getElementById('no-preview').classList.remove('hidden');
       }
@@ -1136,16 +1108,14 @@
       const sel = document.getElementById('cfg-theme');
       const themeId = sel.value;
       const totalRounds = +document.getElementById('cfg-rounds').value;
-      const timePerTurn = +document.getElementById('cfg-time').value;
       await ensureTheme(themeId);
       const indices = shuffle(themeData.map((_, i) => i)).slice(0, totalRounds);
       const totalScores = {};
       Object.keys(gs?.players || {}).forEach(id => { totalScores[id] = 0; });
       await API.patchState(room.code, {
         phase: 'playing', themeId, audioMode: cfgAudioMode,
-        round: 1, totalRounds, timePerTurn,
+        round: 1, totalRounds,
         songIndices: indices, currentSongIndex: 0,
-        timerEnd: Date.now() + timePerTurn * 1000,
         roundEndTime: null, buzzer: null, answers: {}, roundScores: {}, totalScores
       });
     }
@@ -1186,7 +1156,7 @@
         if (phase === 'game_end') enterGameOver(gs);
       } else {
         if (phase === 'lobby') renderLobby(gs);
-        if (phase === 'playing') { updateStatusBar(gs); if (host) checkRoundEnd(gs); }
+        if (phase === 'playing') updateStatusBar(gs);
       }
     }
 
@@ -1202,6 +1172,7 @@
 
       // Reset buzzer UI for new round (host never has the buzzer button, but does see the decision UI)
       document.getElementById('buzzer-btn-wrap').classList.toggle('hidden', host);
+      document.getElementById('host-pass-btn').classList.toggle('hidden', !host);
       document.getElementById('btn-buzzer').disabled = false;
       document.getElementById('buzzer-status').classList.add('hidden');
       document.getElementById('host-decision').classList.add('hidden');
@@ -1225,7 +1196,6 @@
       document.getElementById('player-block').classList.toggle('hidden', !canHear);
       document.getElementById('host-audio-notice').classList.toggle('hidden', canHear);
 
-      startTimer(state.timerEnd, state.timePerTurn);
       updateStatusBar(state);
 
       if (canHear && themeData && state.songIndices) {
@@ -1249,6 +1219,7 @@
       if (buz) {
         document.getElementById('btn-buzzer').disabled = true;
         document.getElementById('buzzer-btn-wrap').classList.add('hidden');
+        document.getElementById('host-pass-btn').classList.add('hidden');
         document.getElementById('buzzer-status').classList.remove('hidden');
         document.getElementById('buzzer-name').textContent = buz.name;
         if (host) {
@@ -1261,21 +1232,6 @@
       }
     }
 
-    function startTimer(timerEnd, totalSecs) {
-      if (timerId) { clearInterval(timerId); timerId = null; }
-      const circ = 2 * Math.PI * 70; // r=70 → 439.8
-      const circle = document.getElementById('tcircle');
-      const display = document.getElementById('t-num');
-      function frame() {
-        const rem = Math.max(0, (timerEnd - Date.now()) / 1000);
-        display.textContent = Math.ceil(rem);
-        circle.style.strokeDashoffset = circ * (1 - rem / totalSecs);
-        circle.style.stroke = rem <= 10 ? '#EF4444' : 'url(#tg)';
-        display.style.color = rem <= 10 ? '#EF4444' : '#fff';
-        if (rem <= 0) { clearInterval(timerId); timerId = null; }
-      }
-      frame(); timerId = setInterval(frame, 250);
-    }
 
     async function pressBuzzer() {
       if (host || myAnswer || gs?.buzzer) return;
@@ -1292,8 +1248,7 @@
       const roundScores = {}, totalScores = { ...(state.totalScores || {}) };
       Object.keys(state.players || {}).forEach(id => { roundScores[id] = 0; });
       if (correct && buz) {
-        const startMs = state.timerEnd - state.timePerTurn * 1000;
-        const pts = calcBuzzerPoints(buz.at, startMs, state.timePerTurn);
+        const pts = 1000;
         roundScores[buz.userId] = pts;
         totalScores[buz.userId] = (totalScores[buz.userId] || 0) + pts;
         API.saveScore(buz.userId, room.id, pts, { round: state.round });
@@ -1302,18 +1257,11 @@
       await API.patchState(room.code, { phase: 'round_end', roundScores, totalScores });
     }
 
-    async function checkRoundEnd(state) {
-      if (roundEndQueued) return;
-      if (state.buzzer) return; // host will decide via hostDecide()
-      const expired = state.timerEnd && Date.now() >= state.timerEnd;
-      if (expired) { roundEndQueued = true; await finishRound(state); }
-    }
-
-    async function finishRound(state) {
-      // Called only on timer expiry with no buzzer — everyone gets 0 pts
+    async function hostPass() {
+      // Host skips the song — no points for anyone
       audio.pause();
-      const roundScores = {}, totalScores = { ...(state.totalScores || {}) };
-      Object.keys(state.players || {}).forEach(id => { roundScores[id] = 0; });
+      const roundScores = {}, totalScores = { ...(gs.totalScores || {}) };
+      Object.keys(gs.players || {}).forEach(id => { roundScores[id] = 0; });
       await API.patchState(room.code, { phase: 'round_end', roundScores, totalScores });
     }
 
@@ -1321,7 +1269,6 @@
     // ROUND RESULT
     // ─────────────────────────────────────────
     function enterRoundResult(state) {
-      if (timerId) { clearInterval(timerId); timerId = null; }
       audio.pause();
       show('round-result');
 
@@ -1380,7 +1327,6 @@
           phase: 'playing',
           round: gs.round + 1,
           currentSongIndex: gs.currentSongIndex + 1,
-          timerEnd: Date.now() + gs.timePerTurn * 1000,
           roundEndTime: null,
           buzzer: null, answers: {}, roundScores: {}
         });
@@ -1391,7 +1337,6 @@
     // GAME OVER
     // ─────────────────────────────────────────
     function enterGameOver(state) {
-      if (timerId) { clearInterval(timerId); timerId = null; }
       audio.pause();
       // No paramos el polling: cuando el anfitrión inicie nueva partida,
       // todos los jugadores volverán automáticamente al lobby vía tick().
